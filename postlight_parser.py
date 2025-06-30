@@ -17,9 +17,13 @@ $ npm -g install @postlight/parser
 import json
 import sys
 
-from reader import HTML2Text, Format, unescape, main
-
-from Naked.toolshed.shell import muterun_js
+from reader import (
+    Format,
+    unescape,
+    main
+)
+from Naked.toolshed.shell import muterun
+import shutil
 
 def postlight_parser(url, parser_cli_path):
     """Wrap the postlight-parser command line driver
@@ -27,10 +31,7 @@ def postlight_parser(url, parser_cli_path):
     url: URL string to parse
     mercur_cli_path: path to postlight-parser command line driver
     """
-    response = muterun_js(
-        parser_cli_path,
-        arguments=url
-    )
+    response = muterun(f'{parser_cli_path} {url}')
     if response.exitcode != 0:
         print('[ERROR] URL: {}'.format(url), file=sys.stderr)
         print('[ERROR]', response.stderr.decode('utf-8'), file=sys.stderr)
@@ -68,10 +69,16 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-p', '--parser-path',
-        default='/opt/homebrew/bin/postlight-parser',
+        default=None,
         help='path to postlight-parser command line driver'
     )
     args = parser.parse_args()
+    # Resolve postlight-parser path
+    if args.parser_path is None:
+        args.parser_path = shutil.which('postlight-parser')
+        if not args.parser_path:
+            print('[ERROR] postlight-parser not found', file=sys.stderr)
+            sys.exit(1)
     obj = main(
         postlight_parser(args.url, args.parser_path),
         args.body_width

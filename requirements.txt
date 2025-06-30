@@ -1,7 +1,8 @@
-certifi==2023.7.22
-charset-normalizer==2.0.12
-html2text==2020.1.16
-idna==3.3
-requests==2.31.0
-urllib3==1.26.18
-Naked
+certifi==2025.6.15
+charset-normalizer==3.4.2
+html2text==2025.4.15
+idna==3.10
+naked==0.1.32
+pyyaml==6.0.2
+requests==2.32.4
+urllib3==2.5.0

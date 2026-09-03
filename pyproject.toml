@@ -26,5 +26,5 @@ pythonVersion = "3.13"
 dev = [
     "basedpyright>=1.39.10",
     "lxml-stubs>=0.5.1",
-    "ruff>=0.16.3",
+    "ruff>=0.16.5",
 ]

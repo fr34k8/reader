@@ -17,6 +17,9 @@ from lxml import etree
 from lxml.etree import Element, _Element  # pyright: ignore[reportPrivateUsage]
 from tabulate import tabulate, tabulate_formats
 from trafilatura import bare_extraction, fetch_response
+from trafilatura.downloads import (
+    DEFAULT_HEADERS,  # pyright: ignore[reportUnknownVariableType]
+)
 
 # these are the same (non-underscored) helpers trafilatura.extract()
 # dispatches to when serializing its extraction result; using them
@@ -24,6 +27,19 @@ from trafilatura import bare_extraction, fetch_response
 from trafilatura.htmlprocessing import build_html_output
 from trafilatura.utils import normalize_unicode
 from trafilatura.xml import xmltotxt
+
+# WORKAROUND (trafilatura 2.2.0): it advertises zstd in Accept-Encoding, then
+# decompresses with zstandard.decompress(), whose one-shot API raises on any
+# frame that omits its decompressed size -- which is what a server compressing
+# a response on the fly sends. trafilatura catches the error and returns the
+# *compressed* bytes, so such pages arrive as binary garbage at HTTP 200 and
+# extract to nothing. Asking only for encodings it can actually decode avoids
+# the whole path; gzip is universally served.
+#
+# Fixed upstream by a streaming _decompress_zstd(), unreleased as of 2.2.0.
+# Remove this together with the trafilatura floor in pyproject.toml once a
+# release carries the fix.
+DEFAULT_HEADERS["accept-encoding"] = "gzip, deflate"
 
 
 class Content(TypedDict):

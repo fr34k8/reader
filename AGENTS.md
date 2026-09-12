@@ -48,6 +48,26 @@
   uv venv --python 3.14.7 --clear && uv sync
   ```
 
+## Upstream workarounds
+
+- `reader.py` overrides trafilatura's `Accept-Encoding` to `gzip, deflate`.
+  trafilatura 2.2.0 advertises `zstd` and then decompresses it with
+  `zstandard.decompress()`, whose one-shot API raises on frames that omit
+  their decompressed size — which is what a server compressing on the fly
+  sends. The error is swallowed and the *compressed* bytes are returned, so
+  affected pages arrive as binary garbage at HTTP 200 and extract to
+  nothing (`simonwillison.net` is one such site).
+- Fixed upstream in [adbar/trafilatura](https://github.com/adbar/trafilatura)
+  by a streaming `_decompress_zstd()`, unreleased as of 2.2.0. When a
+  release carries it, raise the `trafilatura` floor in `pyproject.toml` and
+  delete the override.
+- Check whether the release has landed, and that the override is still
+  needed, with:
+
+  ```sh
+  .venv/bin/python reader.py https://simonwillison.net/tags/tools -f txt | head -3
+  ```
+
 ## Dependency management
 
 - This project is managed by **uv**: `pyproject.toml` + `uv.lock` are the

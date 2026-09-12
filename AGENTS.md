@@ -1,5 +1,53 @@
 # reader — project notes for agents
 
+## Packaging
+
+- The project is a **distributable package**, not just a script:
+  `[build-system]` uses hatchling and `[project.scripts]` in
+  `pyproject.toml` maps the `reader` command to `reader:cli`.
+- `reader.py` is a single top-level module (no package directory), so the
+  hatchling wheel/sdist targets name it explicitly. A new file that must
+  ship has to be added to those `include` lists.
+- `cli()` is the console-script entry point (argparse + printing);
+  `main()` is the library API and returns a `ParseResult` dict. Keep the
+  two separate — importing `reader` must not parse `sys.argv`.
+- Because `[build-system]` exists, `uv sync` installs the project itself
+  in editable mode, so `uv run reader` / `.venv/bin/reader` exercise the
+  real entry point. Verify a packaging change end to end:
+
+  ```sh
+  uv build      # wheel + sdist into dist/
+  ```
+- `uv tool install` resolves **fresh from the `[project.dependencies]`
+  ranges** — it does not read `uv.lock` and has no `--locked` flag. To
+  install the locked set on the pinned interpreter, pass the derived
+  `requirements.txt` as constraints:
+
+  ```sh
+  uv tool install --force -c requirements.txt -p 3.14 .
+  ```
+
+  Without `-c` the tool env drifts ahead of the lock; without `-p` it
+  takes anything satisfying `requires-python`, so it will jump to the
+  next minor release once that becomes the default interpreter.
+
+## Python version
+
+- `.python-version` is **tracked**, not ignored — the entry under
+  `# pyenv` in `.gitignore` is deliberately commented out. It pins the
+  minor series (`3.14`), so the interpreter follows patch releases
+  without a repo edit.
+- `requires-python` in `pyproject.toml` is the support contract;
+  `[tool.pyright] pythonVersion` must be kept in step with it. Raising
+  either drops support for older interpreters and is a breaking change.
+- The venv does *not* follow a patch upgrade on its own: `uv sync` keeps
+  an existing venv whose interpreter still satisfies the pin. Move it
+  deliberately:
+
+  ```sh
+  uv venv --python 3.14.7 --clear && uv sync
+  ```
+
 ## Dependency management
 
 - This project is managed by **uv**: `pyproject.toml` + `uv.lock` are the
@@ -20,8 +68,10 @@
 
 ## Release checklist
 
-1. Bump `version` in `pyproject.toml` (semver; the CLI surface and JSON
-   output schema are the public API).
+1. Bump `version` in `pyproject.toml` (semver; the CLI surface, the JSON
+   output schema, and the importable `main()`/`ParseResult` API are all
+   public). Raising `requires-python` or removing an invocation path
+   counts as breaking — major bump plus a `BREAKING CHANGE:` footer.
 2. `uv lock` so the lockfile records the new version.
 3. Regenerate `requirements.txt` (command above) if dependencies changed.
 4. Commit as `chore(release): bump version to X.Y.Z`.
@@ -61,7 +111,8 @@ uv run basedpyright        # strict type check: zero errors AND warnings
   table/br-based layout) and https://www.gnu.org/philosophy/free-sw.en.html
   (modern, metadata-rich). Check all four formats (`json`, `html`, `md`,
   `txt`) and `-w` wrapping.
-- Run via `.venv/bin/python reader.py` (the venv is `.venv`).
+- Run via `.venv/bin/python reader.py`, or `.venv/bin/reader` to go
+  through the installed console script (the venv is `.venv`).
 - `~/Dropbox/Scripts/Shell/newspaper.sh` (outside this repo, not in git)
   consumes the JSON output (`.title`, `.author`, `.content.text`) — keep
   those fields stable or update the script in tandem.

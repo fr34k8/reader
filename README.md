@@ -6,43 +6,85 @@ Earlier versions of this project used the [Postlight Parser](https://github.com/
 
 ## Install
 
-Clone this repository and install the dependencies with [uv](https://docs.astral.sh/uv/):
+Requires Python 3.14 or newer.
+
+### As a command-line tool
+
+`reader` ships a console script, so [uv](https://docs.astral.sh/uv/) can install it onto your `PATH` in its own isolated environment ([`uv tool install`](https://docs.astral.sh/uv/guides/tools/)):
+
+```
+$ uv tool install git+https://github.com/zyocum/reader
+Installed 1 executable: reader
+$ reader -h
+```
+
+From a local clone, `uv tool install .` does the same, and `uv tool upgrade reader` / `uv tool uninstall reader` manage it afterwards.
+
+### As a library
+
+The module exposes `main()` (returning the parsed document as a dict) and the `ParseResult`/`Content` types, so other CLI or TUI tools can reuse the extractor without shelling out:
+
+```
+$ uv add git+https://github.com/zyocum/reader
+```
+
+```python
+from reader import main as read_article
+
+doc = read_article("https://www.paulgraham.com/greatwork.html", 80)
+print(doc["title"], doc["word_count"])
+```
+
+### For development
+
+Clone this repository and sync the environment with uv:
 
 ```
 $ uv sync
 ```
 
-Or with a classic virtual environment:
+This installs the project itself in editable mode, so `uv run reader` (or `.venv/bin/reader`) runs your working copy.
+
+Or with a classic virtual environment and pip. `requirements.txt` carries the pinned dependencies; installing the project itself (`--no-deps`, so the pins win) is what provides the `reader` command:
 
 ```
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 (reader) $ pip install -r requirements.txt
+(reader) $ pip install --no-deps .
 ```
 
 ## Usage
 
-```
-(reader) $ ./reader.py -h
-usage: reader.py [-h] [-f {json,html,md,txt}] [-w BODY_WIDTH] [-t FORMAT] source
+The examples below use the installed `reader` command; from a clone without installing, `uv run reader` is equivalent.
 
-Get a cleaner version of a web page for reading purposes. This script fetches a URL (or reads
-local HTML) and extracts the main content and metadata via [trafilatura](https://trafilatura.readthedocs.io/), outputting the document as JSON, Markdown, plain-text, or
-HTML.
+```
+$ reader -h
+usage: reader [-h] [-f {json,html,md,txt}] [-w BODY_WIDTH] [-t FORMAT] source
+
+Get a cleaner version of a web page for reading purposes. Fetches a URL (or reads local HTML) and
+extracts the main content and metadata via trafilatura (https://trafilatura.readthedocs.io/),
+outputting the document as JSON, Markdown, plain-text, or HTML.
 
 positional arguments:
-  source                URL to fetch and parse, or path to a local HTML file (use "-" to read
-                        HTML from stdin)
+  source                URL to fetch and parse, or path to a local HTML file (use "-" to read HTML
+                        from stdin)
 
 options:
   -h, --help            show this help message and exit
-  -f {json,html,md,txt}, --format {json,html,md,txt}
+  -f, --format {json,html,md,txt}
                         output format (default: json)
-  -w BODY_WIDTH, --body-width BODY_WIDTH
+  -w, --body-width BODY_WIDTH
                         character offset at which to hard-wrap lines of markdown and plain-text
                         content (default: None)
-  -t FORMAT, --table-format FORMAT
-                        tabulate format for data tables in plain-text content (default: simple)
+  -t, --table-format FORMAT
+                        tabulate format for data tables in plain-text content (one of: asciidoc,
+                        colon_grid, double_grid, double_outline, fancy_grid, fancy_outline,
+                        github, grid, heavy_grid, heavy_outline, html, jira, latex,
+                        latex_booktabs, latex_longtable, latex_raw, mediawiki, mixed_grid,
+                        mixed_outline, moinmoin, orgtbl, outline, pipe, plain, presto, pretty,
+                        psql, rounded_grid, rounded_outline, rst, simple, simple_grid,
+                        simple_outline, textile, tsv, unsafehtml, youtrack) (default: simple)
 ```
 
 When wrapping markdown, lines whose markup would break if split across lines (headings, table rows, horizontal rules, and fenced code blocks) are left intact, and long tokens such as URLs are never split.
@@ -67,7 +109,7 @@ The source can be a URL (fetched by trafilatura), a local HTML file, or `-` to r
 The default output is JSON containing trafilatura's extracted metadata alongside the content in three forms: HTML (`.content.html`), Markdown (`.content.markdown`), and plain-text (`.content.text`):
 
 ```
-(reader) $ ./reader.py https://www.paulgraham.com/greatwork.html | jq .
+$ reader https://www.paulgraham.com/greatwork.html | jq .
 {
   "title": "How to Do Great Work",
   "author": null,
@@ -98,14 +140,14 @@ The default output is JSON containing trafilatura's extracted metadata alongside
 The extracted HTML content is accessible from `.content.html`, or directly with `--format=html`:
 
 ```
-(reader) $ ./reader.py https://www.paulgraham.com/greatwork.html -f html
+$ reader https://www.paulgraham.com/greatwork.html -f html
 ```
 
 ### Markdown
 As a convenience, the `-f/--format` option can output the whole document as Markdown, including some of the human-relevant metadata:
 
 ```
-(reader) $ ./reader.py https://www.paulgraham.com/greatwork.html --format=md
+$ reader https://www.paulgraham.com/greatwork.html --format=md
 ---
 title: "How to Do Great Work"
 url: "https://www.paulgraham.com/greatwork.html"
@@ -130,7 +172,7 @@ The front matter includes the human-relevant metadata fields that are present (e
 Similarly, the whole document can be formatted as plain-text:
 
 ```
-(reader) $ ./reader.py https://www.paulgraham.com/greatwork.html --format=txt -w 80
+$ reader https://www.paulgraham.com/greatwork.html --format=txt -w 80
 title: How to Do Great Work
 url: https://www.paulgraham.com/greatwork.html
 sitename: paulgraham.com
@@ -154,5 +196,5 @@ One use case for this script is to convert content from the web to a format that
 # Usage: newspaper.sh <url>
 set -eu
 
-"path/to/reader.py" "$1" -w 80 -f txt | "${PAGER:-less}"
+reader "$1" -w 80 -f txt | "${PAGER:-less}"
 ```

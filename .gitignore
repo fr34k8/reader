@@ -71,7 +71,8 @@ target/
 .ipynb_checkpoints
 
 # pyenv
-.python-version
+# .python-version is intentionally tracked: it pins the interpreter
+# this project is developed and type-checked against
 
 # celery beat schedule file
 celerybeat-schedule

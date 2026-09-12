@@ -1,11 +1,8 @@
-#!/usr/bin/env python3
-
 """Get a cleaner version of a web page for reading purposes.
 
-This script fetches a URL (or reads local HTML) and extracts the main
-content and metadata via trafilatura
-(https://trafilatura.readthedocs.io/), outputting the document as JSON,
-Markdown, plain-text, or HTML.
+Fetches a URL (or reads local HTML) and extracts the main content and
+metadata via trafilatura (https://trafilatura.readthedocs.io/),
+outputting the document as JSON, Markdown, plain-text, or HTML.
 """
 
 import json
@@ -472,7 +469,12 @@ def main(
     )
 
 
-if __name__ == "__main__":
+def cli() -> None:
+    """Parse command-line arguments, then print the formatted document
+
+    This is the ``reader`` console-script entry point; library users
+    should call main() instead.
+    """
     import argparse
 
     class Args(argparse.Namespace):
@@ -526,3 +528,7 @@ if __name__ == "__main__":
         args.table_format,
     )
     print(Format.formatter[args.format](obj))
+
+
+if __name__ == "__main__":
+    cli()
